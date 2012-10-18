@@ -1,1 +1,0 @@
-127.0.0.1 -  -  [13/10/2012:07:21:33 +0000] "GET /solr/admin/cores?action=RELOAD&core=core-chinese HTTP/1.1" 200 149 

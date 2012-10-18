@@ -6,6 +6,8 @@
 out/*
 logs/*
 tests/log/*
+sorl/logs/*
+*.log
 .DS_Store
 *.swp
 *~
@@ -14,4 +16,3 @@ tests/log/*
 webapps/solr.war
 .settings
 target
-
