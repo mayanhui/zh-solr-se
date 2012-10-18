@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="utf-8"?>
+<config>
+  <abortOnConfigurationError>${solr.abortOnConfigurationError:false}</abortOnConfigurationError>
+  <dataDir>${solr.data.dir:./solr/core-chinese/data}</dataDir>
+  <indexDefaults>
+    <useCompoundFile>true</useCompoundFile>
+    <mergeFactor>10</mergeFactor>
+    <ramBufferSizeMB>64</ramBufferSizeMB>
+    <maxMergeDocs>2147483647</maxMergeDocs>
+    <maxFieldLength>100000</maxFieldLength>
+    <writeLockTimeout>1000</writeLockTimeout>
+    <commitLockTimeout>10000</commitLockTimeout>
+    <lockType>single</lockType>
+  </indexDefaults>
+  <mainIndex>
+    <useCompoundFile>true</useCompoundFile>
+    <ramBufferSizeMB>64</ramBufferSizeMB>
+    <mergeFactor>10</mergeFactor>
+    <maxMergeDocs>2147483647</maxMergeDocs>
+    <maxFieldLength>100000</maxFieldLength>
+    <unlockOnStartup>false</unlockOnStartup>
+    <!-- reopenReaders: If true, IndexReaders will be reopened (often more efficient) instead
+         of closed and then opened.
+    -->
+    <reopenReaders>true</reopenReaders>
+  </mainIndex>
+  <jmx/>
+  <updateHandler class="solr.DirectUpdateHandler2">
+  </updateHandler>
+  <query>
+    <maxBooleanClauses>4096</maxBooleanClauses>
+    <filterCache class="solr.LRUCache" size="0" initialSize="0" autowarmCount="0"/>
+    <queryResultCache class="solr.LRUCache" size="0" initialSize="0" autowarmCount="0"/>
+    <documentCache class="solr.LRUCache" size="0" initialSize="0" autowarmCount="0"/>
+    <enableLazyFieldLoading>true</enableLazyFieldLoading>
+
+    <!-- An optimization that attempts to use a filter to satisfy a search.
+         If the requested sort does not include score, then the filterCache
+         will be checked for a filter matching the query. If found, the filter
+         will be used as the source of document ids, and then the sort will be
+         applied to that.
+     -->
+    <useFilterForSortedQuery>true</useFilterForSortedQuery>
+
+    <!-- An optimization for use with the queryResultCache.  When a search
+         is requested, a superset of the requested number of document ids
+         are collected.  For example, if a search for a particular query
+         requests matching documents 10 through 19, and queryWindowSize is 50,
+         then documents 0 through 49 will be collected and cached.  Any further
+         requests in that range can be satisfied via the cache.  -->
+    <queryResultWindowSize>30</queryResultWindowSize>
+
+    <!-- Maximum number of documents to cache for any entry in the
+         queryResultCache. -->
+    <queryResultMaxDocsCached>30</queryResultMaxDocsCached>
+
+    <HashDocSet maxSize="3000" loadFactor="0.75"/>
+    <listener event="newSearcher" class="solr.QuerySenderListener">
+      <arr name="queries">
+        <lst>
+          <str name="q">fs</str><!-- changeme -->
+          <str name="start">0</str>
+          <str name="rows">10</str>
+        </lst>
+      </arr>
+    </listener>
+    <listener event="firstSearcher" class="solr.QuerySenderListener">
+      <arr name="queries">
+        <lst>
+          <str name="q">fast_warm</str><!-- changeme -->
+          <str name="start">0</str>
+          <str name="rows">10</str>
+        </lst>
+      </arr>
+    </listener>
+    <useColdSearcher>false</useColdSearcher>
+    <maxWarmingSearchers>2</maxWarmingSearchers>
+  </query>
+  <requestDispatcher handleSelect="true">
+    <requestParsers enableRemoteStreaming="false" multipartUploadLimitInKB="2048"/>
+    <httpCaching lastModifiedFrom="openTime" etagSeed="Solr">
+      </httpCaching>
+  </requestDispatcher>
+  <requestHandler name="standard" class="solr.SearchHandler" default="true">
+    <lst name="defaults">
+      <str name="echoParams">explicit</str>
+      <int name="rows">50</int>
+    </lst>
+    <arr name="last-components">
+      <str>spellcheck</str>
+    </arr>
+  </requestHandler>
+  <requestHandler name="dismax" class="solr.SearchHandler" default="false">
+    <lst name="defaults">
+      <str name="defType">dismax</str>
+      <str name="echoParams">explicit</str>
+      <float name="tie">0.01</float>
+     <str name="qf">
+        chinese_name
+     </str>
+     <str name="pf">
+       chinese_name
+     </str>
+     <str name="fl">
+        chinese_id,chinese_name,chinese_content
+     </str>      
+      <str name="mm">
+        2&lt;-1 5&lt;-2 6&lt;90%
+     </str>
+      <int name="ps">100</int>
+      <str name="q.alt">*:*</str>
+    </lst>
+  </requestHandler>
+  <searchComponent name="spellcheck" class="solr.SpellCheckComponent">
+    <lst name="defaults">
+      <str name="spellcheck.onlyMorePopular">false</str>
+      <str name="spellcheck.extendedResults">true</str>
+      <str name="spellcheck.count">3</str>
+      <str name="spellcheck.collate">true</str>      
+    </lst>
+    <str name="queryAnalyzerFieldType">textSpell</str>
+    <lst name="spellchecker">
+      <str name="name">default</str>
+      <str name="field">spell</str>
+      <str name="spellcheckIndexDir">./spellchecker1</str>
+      <str name="buildOnCommit">true</str>
+    </lst>
+  </searchComponent>
+  <searchComponent name="elevator" class="solr.QueryElevationComponent">
+    <str name="queryFieldType">string</str>
+    <str name="config-file">elevate.xml</str>
+  </searchComponent>
+  <requestHandler name="/elevate" class="solr.SearchHandler" startup="lazy">
+    <lst name="defaults">
+      <str name="echoParams">explicit</str>
+    </lst>
+    <arr name="last-components">
+      <str>elevator</str>
+    </arr>
+  </requestHandler>
+  <requestHandler name="/update" class="solr.XmlUpdateRequestHandler"/>
+  <requestHandler name="/analysis" class="solr.AnalysisRequestHandler"/>
+  <requestHandler name="/update/csv" class="solr.CSVRequestHandler" startup="lazy"/>
+  <requestHandler name="/admin/" class="org.apache.solr.handler.admin.AdminHandlers"/>
+  <requestHandler name="/admin/ping" class="PingRequestHandler">
+    <lst name="defaults">
+      <str name="qt">standard</str>
+      <str name="q">solrpingquery</str>
+      <str name="echoParams">all</str>
+    </lst>
+  </requestHandler>
+  <requestHandler name="/debug/dump" class="solr.DumpRequestHandler">
+    <lst name="defaults">
+      <str name="echoParams">explicit</str>
+      <str name="echoHandler">true</str>
+    </lst>
+  </requestHandler>
+  <highlighting>
+    <fragmenter name="gap" class="org.apache.solr.highlight.GapFragmenter" default="true">
+      <lst name="defaults">
+        <int name="hl.fragsize">100</int>
+      </lst>
+    </fragmenter>
+    <fragmenter name="regex" class="org.apache.solr.highlight.RegexFragmenter">
+      <lst name="defaults">
+        <int name="hl.fragsize">70</int>
+        <float name="hl.regex.slop">0.5</float>
+        <str name="hl.regex.pattern">[-\w ,/\n\"']{20,200}</str>
+      </lst>
+    </fragmenter>
+    <formatter name="html" class="org.apache.solr.highlight.HtmlFormatter" default="true">
+      <lst name="defaults">
+        <str name="hl.simple.pre">&lt;em&gt;</str>
+        <str name="hl.simple.post">&lt;/em&gt;</str>
+      </lst>
+    </formatter>
+  </highlighting>
+  <queryResponseWriter name="xml" class="org.apache.solr.request.XMLResponseWriter" default="true"/>
+  <queryResponseWriter name="json" class="org.apache.solr.request.JSONResponseWriter"/>
+  <queryResponseWriter name="ruby" class="org.apache.solr.request.RubyResponseWriter"/>
+  <queryResponseWriter name="php" class="org.apache.solr.request.PHPResponseWriter"/>
+  <queryResponseWriter name="phps" class="org.apache.solr.request.PHPSerializedResponseWriter"/>
+  <admin>
+    <defaultQuery>solr</defaultQuery>
+  </admin>
+
+  <!-- START LOCAL SEARCH CHANGES -->
+  <updateRequestProcessorChain>
+    <processor class="com.pjaol.search.solr.update.LocalUpdateProcessorFactory">
+      <str name="latField">lat</str>
+      <str name="lngField">lng</str>
+      <int name="startTier">9</int><!-- The lowest level to store data at, level 9 covers about 100 miles,-->
+      <int name="endTier">17</int><!-- The highest granular level you want to search at, 15 is about 1 mile -->
+    </processor>
+    <processor class="solr.RunUpdateProcessorFactory"/>
+    <processor class="solr.LogUpdateProcessorFactory"/>
+  </updateRequestProcessorChain>
+  <requestHandler name="geo" class="com.pjaol.search.solr.LocalSolrRequestHandler">
+    <str name="latField">lat</str>
+    <str name="lngField">lng</str>
+    <lst name="defaults">
+      <str name="type">dismax</str>
+      <str name="echoParams">explicit</str>
+    </lst>
+  </requestHandler>
+  <!-- END LOCAL SEARCH CHANGES -->
+
+  <!--<requestHandler name="/dataimport" class="org.apache.solr.handler.dataimport.DataImportHandler">
+    <lst name="defaults">
+      <str name="config">./solr/core-chinese/conf/data-config.xml</str>
+    </lst>
+  </requestHandler>-->
+
+  <!-- START REPLICATION SETTINGS -->
+  <requestHandler name="/replication" class="solr.ReplicationHandler" >
+   <lst name="master">
+    <str name="enable">${enable.master:false}</str>
+    <str name="replicateAfter">commit</str>
+   </lst>
+   <lst name="slave">
+    <str name="enable">${enable.slave:false}</str>
+    <str name="masterUrl">http://*.com:8983/solr/core-chinese/replication</str>
+    <str name="pollInterval">00:00:60</str>
+   </lst>
+  </requestHandler>
+  <!-- END REPLICATION SETTINGS -->
+</config>
